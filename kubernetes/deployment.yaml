@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskboard-lite
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: taskboard-lite
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  # The SQLite file lives on a ReadWriteOnce volume. A rolling update could try
+  # to start a new pod on another node while the old one still holds the volume,
+  # so all pods are stopped before new ones start.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taskboard-lite
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taskboard-lite
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: taskboard-lite
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: taskboard-lite
+          # Local image built with: docker build -f docker/Dockerfile -t taskboard-lite:local .
+          # Load it into minikube with: minikube image load taskboard-lite:local
+          image: taskboard-lite:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: taskboard-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secret
+                  key: DB_PASSWORD
+            - name: DATA_DIR
+              value: /app/data
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: taskboard-data

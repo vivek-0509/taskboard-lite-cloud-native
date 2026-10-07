@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/part-of: taskboard-lite
+    # Warn (do not block) when a pod in this namespace is not "restricted"-compliant.
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
