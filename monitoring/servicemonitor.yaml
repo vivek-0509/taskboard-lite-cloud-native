@@ -1,0 +1,29 @@
+# ServiceMonitor for kube-prometheus-stack (Prometheus Operator).
+#
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+#   kubectl apply -f monitoring/servicemonitor.yaml
+#
+# The "release" label must match the Helm release name of the stack, because
+# its Prometheus only selects ServiceMonitors carrying that label.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: taskboard-lite
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/part-of: taskboard-lite
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - taskboard
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taskboard-lite
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 5s

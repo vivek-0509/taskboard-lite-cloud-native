@@ -1,0 +1,62 @@
+# PrometheusRule for kube-prometheus-stack: the same alerts as alerts.yml,
+# delivered as a custom resource so the operator loads them into Prometheus.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: taskboard-lite
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/part-of: taskboard-lite
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: taskboard.rules
+      rules:
+        - alert: TaskboardDown
+          expr: up{job="taskboard-lite"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            app: taskboard-lite
+          annotations:
+            summary: "TaskBoard Lite target is down"
+            description: "Prometheus has not been able to scrape {{ $labels.instance }} for more than 1 minute."
+
+        - alert: TaskboardHighErrorRate
+          expr: |
+            (
+              sum(rate(taskboard_requests_total{job="taskboard-lite", status=~"5.."}[5m]))
+              /
+              sum(rate(taskboard_requests_total{job="taskboard-lite"}[5m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            app: taskboard-lite
+          annotations:
+            summary: "TaskBoard Lite error rate above 5%"
+            description: "{{ $value | humanizePercentage }} of requests returned a 5xx status in the last 5 minutes."
+
+        - alert: TaskboardNotReady
+          expr: sum(rate(taskboard_requests_total{job="taskboard-lite", endpoint="/ready", status="503"}[2m])) > 0
+          for: 2m
+          labels:
+            severity: warning
+            app: taskboard-lite
+          annotations:
+            summary: "TaskBoard Lite readiness probe is failing"
+            description: "The SQLite data directory is probably not writable (check the PVC permissions)."
+
+        - alert: TaskboardHighCpu
+          expr: |
+            sum by (pod) (
+              rate(container_cpu_usage_seconds_total{namespace="taskboard", container="taskboard-lite"}[5m])
+            ) > 0.15
+          for: 5m
+          labels:
+            severity: warning
+            app: taskboard-lite
+          annotations:
+            summary: "TaskBoard Lite pod {{ $labels.pod }} is using more than 75% of its CPU limit"
+            description: "Sustained CPU usage; the HPA should scale out. Check kubectl top pods -n taskboard."
