@@ -1,0 +1,15 @@
+# Used when the build context is application/ itself.
+# The main Dockerfile builds from the repository root; see ../.dockerignore.
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+junit.xml
+htmlcov/
+tests/
+data/
+*.db
+.venv/
+venv/
+.env
