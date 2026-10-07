@@ -1,0 +1,79 @@
+# Scenario 01 - wrong image tag -> ImagePullBackOff
+#
+# BUG: the image tag "v9.9.9" does not exist (locally or in any registry).
+# With imagePullPolicy IfNotPresent the kubelet looks for taskboard-lite:v9.9.9
+# on the node, does not find it, tries docker.io/library/taskboard-lite:v9.9.9,
+# fails (ErrImagePull) and backs off (ImagePullBackOff). The pod never starts.
+#
+# FIX: use the tag that was loaded into the cluster: taskboard-lite:local
+#   kubectl -n taskboard set image deployment/taskboard-broken-image taskboard-lite=taskboard-lite:local
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskboard-broken-image
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-01
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taskboard-lite-broken
+      app.kubernetes.io/instance: scenario-01
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taskboard-lite-broken
+        app.kubernetes.io/instance: scenario-01
+        app.kubernetes.io/part-of: taskboard-lite
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: taskboard-lite
+          image: taskboard-lite:v9.9.9   # <-- BUG: this tag does not exist
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: taskboard-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          emptyDir: {}

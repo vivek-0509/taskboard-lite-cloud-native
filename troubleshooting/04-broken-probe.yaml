@@ -1,0 +1,126 @@
+# Scenario 04 - readiness probe on a wrong path -> pods never Ready, 503 via ingress
+#
+# BUG: the readiness probe calls /readyz, but the application serves /ready.
+# Every probe gets a 404, so the kubelet never marks the pod Ready. The
+# container itself is healthy (liveness on /health passes, so it is not
+# restarted), but the Service has no ready endpoints and the NGINX ingress
+# answers "503 Service Temporarily Unavailable". kubectl shows READY 0/1.
+#
+# FIX: probe the real readiness endpoint /ready
+#   kubectl -n taskboard patch deployment taskboard-broken-probe --type json \
+#     -p '[{"op":"replace","path":"/spec/template/spec/containers/0/readinessProbe/httpGet/path","value":"/ready"}]'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskboard-broken-probe
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-04
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taskboard-lite-broken
+      app.kubernetes.io/instance: scenario-04
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taskboard-lite-broken
+        app.kubernetes.io/instance: scenario-04
+        app.kubernetes.io/part-of: taskboard-lite
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: taskboard-lite
+          image: taskboard-lite:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: taskboard-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /readyz   # <-- BUG: the app serves /ready, /readyz returns 404
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskboard-broken-probe
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-04
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-04
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskboard-broken-probe
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-04
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: broken-probe.taskboard.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: taskboard-broken-probe
+                port:
+                  number: 80

@@ -1,0 +1,99 @@
+# Scenario 02 - Service selector mismatch -> no endpoints, connection refused
+#
+# BUG: the pods carry the label app.kubernetes.io/instance=scenario-02 but the
+# Service selects app.kubernetes.io/instance=scenario-2 (missing zero). Label
+# selectors are exact string matches, so the Service has no endpoints. The pod
+# is Running and Ready, yet every request to the Service fails.
+#
+# FIX: make the selector match the pod labels (scenario-02):
+#   kubectl -n taskboard patch svc taskboard-broken-selector \
+#     -p '{"spec":{"selector":{"app.kubernetes.io/name":"taskboard-lite-broken","app.kubernetes.io/instance":"scenario-02"}}}'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskboard-broken-selector
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-02
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: taskboard-lite-broken
+      app.kubernetes.io/instance: scenario-02
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: taskboard-lite-broken
+        app.kubernetes.io/instance: scenario-02   # pods are labelled "scenario-02"
+        app.kubernetes.io/part-of: taskboard-lite
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: taskboard-lite
+          image: taskboard-lite:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: taskboard-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskboard-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskboard-broken-selector
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-02
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: taskboard-lite-broken
+    app.kubernetes.io/instance: scenario-2   # <-- BUG: pods are labelled scenario-02
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
