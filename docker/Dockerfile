@@ -25,7 +25,7 @@ FROM python:3.12-alpine
 
 LABEL org.opencontainers.image.title="taskboard-lite" \
       org.opencontainers.image.description="TaskBoard Lite - final DevOps project workload" \
-      org.opencontainers.image.source="https://github.com/vivek-0509/devops_final_assignment"
+      org.opencontainers.image.source="https://github.com/vivek-0509/Devops_Final_Assignment_N_Project"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
