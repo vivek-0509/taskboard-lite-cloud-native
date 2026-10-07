@@ -1,0 +1,13 @@
+# local runtime data created by the app / docker compose
+application/data/
+docker/data/
+*.db
+
+# test and scan reports
+application/junit.xml
+application/coverage.xml
+application/htmlcov/
+bandit-report.json
+pip-audit-report.json
+trivy-results.sarif
+image.tar

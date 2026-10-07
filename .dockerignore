@@ -1,0 +1,26 @@
+# Build context is this directory; only application/ is needed inside the image.
+.git
+.github
+docker
+helm
+kubernetes
+gitops
+monitoring
+security
+terraform
+troubleshooting
+screenshots
+README.md
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.coverage
+**/coverage.xml
+**/junit.xml
+**/htmlcov
+**/data
+**/*.db
+**/.venv
+**/venv
+**/.env
+application/tests
