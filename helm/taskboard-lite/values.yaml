@@ -1,0 +1,114 @@
+# Default values for taskboard-lite.
+# Install:  helm upgrade --install taskboard-lite helm/taskboard-lite -n taskboard --create-namespace
+# Prod:     helm upgrade --install taskboard-lite helm/taskboard-lite -n taskboard -f helm/taskboard-lite/values-prod.yaml
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 2
+
+image:
+  repository: taskboard-lite
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Rendered into a ConfigMap and injected with envFrom.
+config:
+  appEnv: production
+  logLevel: INFO
+  featureFlags: dark-mode,metrics
+  # Empty string means "use Chart.appVersion".
+  appVersion: ""
+
+# DB_PASSWORD is injected from a Secret. The default is a DEMO value; real
+# deployments either set secret.create=false and point existingSecret at a
+# Secret created from a vault / sealed secret, or override dbPassword with
+# --set-string from a CI variable that is never committed.
+secret:
+  create: true
+  existingSecret: ""
+  dbPassword: demo-only-change-me
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  mountPath: /app/data
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  host: taskboard.local
+  path: /
+  pathType: Prefix
+  annotations: {}
+  tls: []
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 60
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+probes:
+  startup:
+    path: /health
+    periodSeconds: 2
+    failureThreshold: 30
+  readiness:
+    path: /ready
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    path: /health
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+# Empty string picks Recreate when persistence is enabled (RWO volume) and
+# RollingUpdate otherwise.
+strategy:
+  type: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: /metrics
+
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

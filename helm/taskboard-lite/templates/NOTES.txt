@@ -1,0 +1,25 @@
+{{ .Chart.Name }} {{ .Chart.Version }} (app {{ include "taskboard-lite.appVersion" . }}) installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Image ........ {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+Replicas ..... {{ if .Values.hpa.enabled }}{{ .Values.hpa.minReplicas }}-{{ .Values.hpa.maxReplicas }} (HPA, CPU {{ .Values.hpa.targetCPUUtilizationPercentage }}%){{ else }}{{ .Values.replicaCount }}{{ end }}
+Persistence .. {{ if .Values.persistence.enabled }}PVC {{ include "taskboard-lite.pvcName" . }} ({{ .Values.persistence.size }}){{ else }}emptyDir (data is lost on restart){{ end }}
+Strategy ..... {{ include "taskboard-lite.strategyType" . }}
+
+Wait for the rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "taskboard-lite.fullname" . }}
+
+{{- if .Values.ingress.enabled }}
+
+Reach the app through the ingress (needs an NGINX ingress controller and a hosts entry):
+  echo "$(minikube ip) {{ .Values.ingress.host }}" | sudo tee -a /etc/hosts
+  curl http://{{ .Values.ingress.host }}{{ .Values.ingress.path }}health
+{{- end }}
+
+Or with a port-forward:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "taskboard-lite.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/health
+  curl http://localhost:8080/ready
+  curl http://localhost:8080/api/config
+  curl -X POST -H 'Content-Type: application/json' -d '{"title":"hello"}' http://localhost:8080/api/tasks
+
+Metrics are exposed on /metrics for Prometheus (see monitoring/servicemonitor.yaml).

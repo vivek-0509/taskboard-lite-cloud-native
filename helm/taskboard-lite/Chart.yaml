@@ -1,0 +1,14 @@
+apiVersion: v2
+name: taskboard-lite
+description: TaskBoard Lite - Flask task board used as the final DevOps project workload
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - flask
+  - taskboard
+  - devops-capstone
+maintainers:
+  - name: Vivek Singh Solanki
+sources:
+  - https://github.com/vivek-0509/devops_final_assignment

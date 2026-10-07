@@ -1,0 +1,20 @@
+# Production overrides: helm upgrade --install taskboard-lite helm/taskboard-lite -f helm/taskboard-lite/values-prod.yaml
+replicaCount: 3
+
+config:
+  appEnv: production
+  logLevel: WARNING
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 96Mi
+  limits:
+    cpu: 300m
+    memory: 192Mi
