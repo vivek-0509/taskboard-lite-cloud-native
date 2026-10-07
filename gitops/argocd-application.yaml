@@ -1,0 +1,40 @@
+# Argo CD Application: the cluster continuously reconciles the taskboard
+# namespace with gitops/manifests in the main branch of this repository.
+#
+#   kubectl create namespace argocd
+#   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+#   kubectl -n argocd patch cm argocd-cm --type merge \
+#   kubectl apply -f gitops/argocd-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: taskboard-lite
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/part-of: taskboard-lite
+  finalizers:
+    # Deleting the Application also deletes the resources it created.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/vivek-0509/devops_final_assignment.git
+    targetRevision: main
+    path: session-21-final-devops-project/final-devops-project/gitops/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: taskboard
+  syncPolicy:
+    automated:
+      prune: true     # delete resources that were removed from git
+      selfHeal: true  # revert manual kubectl changes back to the git state
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m

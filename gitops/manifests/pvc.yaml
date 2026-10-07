@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: taskboard-data
+  namespace: taskboard
+  labels:
+    app.kubernetes.io/name: taskboard-lite
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: taskboard-lite
+spec:
+  # "standard" is the default StorageClass on minikube (hostPath provisioner) and kind.
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
