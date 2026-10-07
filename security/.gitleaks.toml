@@ -1,0 +1,53 @@
+# Gitleaks (secret scanning) configuration for TaskBoard Lite.
+#
+# Local run (from the repository root):
+#   gitleaks git --config session-21-final-devops-project/final-devops-project/security/.gitleaks.toml --verbose
+# Scan the working tree only (no git history):
+#   gitleaks dir --config .../security/.gitleaks.toml session-21-final-devops-project/final-devops-project
+#
+# The pipeline passes this file through GITLEAKS_CONFIG to gitleaks/gitleaks-action@v2.
+
+title = "TaskBoard Lite gitleaks configuration"
+
+[extend]
+# Keep every rule that ships with gitleaks (AWS keys, GitHub tokens, private keys,
+# generic high-entropy "password = ..." assignments, ...) and only add allowlists.
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Why there is an allowlist at all
+#
+# The project deliberately ships a *demo* secret so that secret injection can be
+# demonstrated end to end (Secret -> env DB_PASSWORD -> /api/config reports
+# db_password_set=true). The value is "demo-only-change-me" and is documented as
+# such. A real deployment pulls the value from a vault / sealed secret and never
+# commits it, which is exactly what gitleaks should keep enforcing everywhere
+# else. The allowlist is therefore narrow: specific files and the specific demo
+# string, nothing more. Anything that looks like a real credential in these files
+# (an AWS key, a token) is still reported because only the demo string is ignored.
+# ---------------------------------------------------------------------------
+[[allowlists]]
+description = "Demo placeholder password used by the Kubernetes Secret, Helm values and compose file"
+regexTarget = "match"
+regexes = [
+  '''demo-only-change-me''',
+  '''compose-demo-only''',
+]
+paths = [
+  '''kubernetes/secret\.yaml$''',
+  '''helm/taskboard-lite/values\.yaml$''',
+  '''helm/taskboard-lite/values-prod\.yaml$''',
+  '''docker/docker-compose\.yml$''',
+  '''troubleshooting/03-broken-secret-ref\.yaml$''',
+]
+
+[[allowlists]]
+description = "Generated reports and lock files are not source code"
+paths = [
+  '''bandit-report\.json$''',
+  '''pip-audit-report\.json$''',
+  '''trivy-results\.sarif$''',
+  '''\.terraform\.lock\.hcl$''',
+  '''\.venv/''',
+  '''security/reports/''',
+]

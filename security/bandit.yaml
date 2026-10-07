@@ -1,0 +1,21 @@
+# Bandit (SAST) configuration for TaskBoard Lite.
+#
+# Local run (from final-devops-project/):
+#   bandit -r application -c security/bandit.yaml
+#
+# The pipeline writes a JSON report and only fails the build on HIGH severity:
+#   bandit -r application -c security/bandit.yaml -f json -o bandit-report.json --exit-zero
+#   bandit -r application -c security/bandit.yaml --severity-level high
+
+# Directories that are never scanned. Tests use assert statements and
+# throw-away values on purpose, so they would only produce noise.
+exclude_dirs:
+  - tests
+  - .venv
+  - venv
+  - __pycache__
+
+# B101 = use of assert. Asserts are fine in this code base (they are only
+# used in tests, which are excluded anyway) and would otherwise flood the report.
+skips:
+  - B101

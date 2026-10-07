@@ -1,0 +1,32 @@
+# Trivy (container image scanning) configuration for TaskBoard Lite.
+#
+# Local run (from final-devops-project/):
+#   trivy image --config security/trivy.yaml taskboard-lite:local
+#
+# The pipeline passes the same settings explicitly to aquasecurity/trivy-action
+# and uploads a SARIF report to the GitHub Security tab.
+
+# Only vulnerabilities at these levels fail the scan.
+severity:
+  - HIGH
+  - CRITICAL
+
+# Skip findings that have no fixed package version yet; there is nothing
+# actionable about them other than tracking the upstream advisory.
+ignore-unfixed: true
+
+# Non-zero exit code when findings remain, so the pipeline fails.
+exit-code: 1
+
+format: table
+timeout: 10m
+
+scan:
+  scanners:
+    - vuln
+    - secret
+
+vulnerability:
+  type:
+    - os
+    - library

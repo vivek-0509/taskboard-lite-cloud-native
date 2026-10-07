@@ -1,0 +1,6 @@
+# Trivy ignore list for TaskBoard Lite.
+#
+# One CVE id per line, optionally followed by an expiry and a reason, e.g.
+#   CVE-2024-12345 exp:2025-12-31  # false positive: package not loaded at runtime
+#
+# Every entry must be justified in a pull request. The list is intentionally empty.
