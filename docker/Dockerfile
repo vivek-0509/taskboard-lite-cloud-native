@@ -2,7 +2,7 @@
 #
 # TaskBoard Lite - multi-stage, multi-arch image (works on arm64 and amd64).
 #
-# The build context is the project root (final-devops-project/):
+# The build context is the repository root:
 #   docker build -f docker/Dockerfile -t taskboard-lite:local .
 #
 # To build an amd64 image on Apple Silicon (for the EC2 instance in terraform/):
@@ -25,7 +25,7 @@ FROM python:3.12-alpine
 
 LABEL org.opencontainers.image.title="taskboard-lite" \
       org.opencontainers.image.description="TaskBoard Lite - final DevOps project workload" \
-      org.opencontainers.image.source="https://github.com/vivek-0509/Devops_Final_Assignment_N_Project"
+      org.opencontainers.image.source="https://github.com/vivek-0509/taskboard-lite-cloud-native"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

@@ -19,9 +19,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/vivek-0509/Devops_Final_Assignment_N_Project.git
+    repoURL: https://github.com/vivek-0509/taskboard-lite-cloud-native.git
     targetRevision: main
-    path: session-21-final-devops-project/final-devops-project/gitops/manifests
+    path: gitops/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: taskboard
