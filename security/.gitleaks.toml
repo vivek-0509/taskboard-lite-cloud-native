@@ -1,9 +1,9 @@
 # Gitleaks (secret scanning) configuration for TaskBoard Lite.
 #
 # Local run (from the repository root):
-#   gitleaks git --config session-21-final-devops-project/final-devops-project/security/.gitleaks.toml --verbose
+#   gitleaks git --config security/.gitleaks.toml --verbose
 # Scan the working tree only (no git history):
-#   gitleaks dir --config .../security/.gitleaks.toml session-21-final-devops-project/final-devops-project
+#   gitleaks dir --config security/.gitleaks.toml .
 #
 # The pipeline passes this file through GITLEAKS_CONFIG to gitleaks/gitleaks-action@v2.
 

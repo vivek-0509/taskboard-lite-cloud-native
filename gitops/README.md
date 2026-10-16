@@ -73,8 +73,10 @@ kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deployment/argocd-server
 
+# 2. (optional) extra kustomize build flags for the repo server
 kubectl -n argocd patch cm argocd-cm --type merge \
-  -p '{"data":{"kustomize.buildOptions":"kubectl -n argocd rollout restart deployment/argocd-repo-server
+  -p '{"data":{"kustomize.buildOptions":"--load-restrictor LoadRestrictionsNone"}}'
+kubectl -n argocd rollout restart deployment/argocd-repo-server
 
 # 3. register the application
 kubectl apply -f gitops/argocd-application.yaml
@@ -99,7 +101,8 @@ Prerequisites on the cluster side:
 Render locally without a cluster:
 
 ```bash
-kustomize build ```
+kubectl kustomize gitops/manifests   # or: kustomize build gitops/manifests
+```
 
 ## Secrets in GitOps
 

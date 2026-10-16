@@ -17,7 +17,7 @@ and configured from this directory.
 
 ## Running each tool locally
 
-All commands run from `final-devops-project/` (Apple Silicon friendly; every
+All commands run from the repository root (Apple Silicon friendly; every
 tool has an arm64 build).
 
 ```bash
@@ -37,7 +37,7 @@ bandit -r application -c security/bandit.yaml --severity-level high   # exit 1 o
 pip-audit -r application/requirements.txt --strict --desc on
 
 # 4. secret scanning (run from the repository root so git history is included)
-( cd ../.. && gitleaks git --config session-21-final-devops-project/final-devops-project/security/.gitleaks.toml --verbose )
+gitleaks git --config security/.gitleaks.toml --verbose
 gitleaks dir --config security/.gitleaks.toml .                  # working tree only
 
 # 5. image scanning

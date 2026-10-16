@@ -1,6 +1,6 @@
 # Trivy (container image scanning) configuration for TaskBoard Lite.
 #
-# Local run (from final-devops-project/):
+# Local run (from the repository root):
 #   trivy image --config security/trivy.yaml taskboard-lite:local
 #
 # The pipeline passes the same settings explicitly to aquasecurity/trivy-action

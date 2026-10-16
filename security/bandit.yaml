@@ -1,6 +1,6 @@
 # Bandit (SAST) configuration for TaskBoard Lite.
 #
-# Local run (from final-devops-project/):
+# Local run (from the repository root):
 #   bandit -r application -c security/bandit.yaml
 #
 # The pipeline writes a JSON report and only fails the build on HIGH severity:

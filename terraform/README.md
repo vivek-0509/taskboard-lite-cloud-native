@@ -36,7 +36,7 @@ Everything is created in one `apply` and removed in one `destroy`.
 ## Run
 
 ```bash
-cd session-21-final-devops-project/final-devops-project/terraform
+cd terraform
 cp terraform.tfvars.example terraform.tfvars   # edit bucket_name at least
 
 terraform init          # downloads the AWS provider, creates .terraform.lock.hcl
