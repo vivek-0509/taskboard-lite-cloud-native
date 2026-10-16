@@ -1,9 +1,7 @@
 # Final DevOps Pipeline for TaskBoard Lite.
 #
-# GitHub only runs workflows stored in the repository root under .github/workflows/.
-# This file lives next to the project for review; copy it to the repository root
-# (.github/workflows/final-pipeline.yml) to activate it. All paths below are
-# relative to the repository root, which is why WORKDIR is set.
+# Lives at .github/workflows/final-pipeline.yml, so GitHub runs it on every push
+# to main. All paths are relative to the repository root.
 #
 # Stages (each one needs the previous one):
 #   test -> sast -> sca -> secret-scan -> docker-build -> image-scan -> security-gate
@@ -15,9 +13,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "session-21-final-devops-project/**"
-      - ".github/workflows/final-pipeline.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,13 +24,8 @@ concurrency:
 
 env:
   IMAGE_TAG: ${{ github.sha || 'local' }}   # commit SHA on GitHub, 'local' when run with act
-  WORKDIR: session-21-final-devops-project/final-devops-project
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/taskboard-lite
   PYTHON_VERSION: "3.12"
-
-defaults:
-  run:
-    working-directory: session-21-final-devops-project/final-devops-project
 
 jobs:
   # ---------------------------------------------------------------- 1. tests
@@ -52,17 +42,17 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: ${{ env.WORKDIR }}/application/requirements-dev.txt
+          cache-dependency-path: application/requirements-dev.txt
       - name: Python venv when running locally with act
         if: ${{ env.ACT }}
         run: |
-          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> $GITHUB_PATH
+          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: pip install -r application/requirements-dev.txt
 
       - name: Run pytest with coverage
-        working-directory: ${{ env.WORKDIR }}/application
+        working-directory: application
         run: |
           pytest -v \
             --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml \
@@ -74,8 +64,8 @@ jobs:
         with:
           name: test-results
           path: |
-            ${{ env.WORKDIR }}/application/junit.xml
-            ${{ env.WORKDIR }}/application/coverage.xml
+            application/junit.xml
+            application/coverage.xml
           if-no-files-found: error
 
   # ----------------------------------------------------------------- 2. SAST
@@ -95,7 +85,7 @@ jobs:
       - name: Python venv when running locally with act
         if: ${{ env.ACT }}
         run: |
-          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> $GITHUB_PATH
+          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> "$GITHUB_PATH"
 
       - name: Install bandit
         run: pip install bandit==1.8.3
@@ -108,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bandit-report
-          path: ${{ env.WORKDIR }}/bandit-report.json
+          path: bandit-report.json
 
       - name: Fail on HIGH severity findings
         run: |
@@ -140,7 +130,7 @@ jobs:
       - name: Python venv when running locally with act
         if: ${{ env.ACT }}
         run: |
-          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> $GITHUB_PATH
+          python3 -m venv /tmp/venv && echo "/tmp/venv/bin" >> "$GITHUB_PATH"
 
       - name: Install pip-audit
         run: pip install pip-audit==2.9.0
@@ -154,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pip-audit-report
-          path: ${{ env.WORKDIR }}/pip-audit-report.json
+          path: pip-audit-report.json
 
       - name: Fail on known vulnerabilities
         run: pip-audit -r application/requirements.txt --strict --desc on
@@ -175,15 +165,11 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
 
       - name: gitleaks (local act fallback, same rules)
-
         if: ${{ env.ACT }}
-
-        working-directory: .
-
-        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 dir /repo/${{ env.WORKDIR }} -c /repo/${{ env.WORKDIR }}/security/.gitleaks.toml --no-banner
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 dir /repo -c /repo/security/.gitleaks.toml --no-banner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: ${{ env.WORKDIR }}/security/.gitleaks.toml
+          GITLEAKS_CONFIG: security/.gitleaks.toml
           GITLEAKS_ENABLE_SUMMARY: "true"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
 
@@ -205,7 +191,7 @@ jobs:
       - name: Smoke test the container
         run: |
           docker run -d --name smoke -p 8000:8000 "$IMAGE_NAME:${{ env.IMAGE_TAG }}"
-          for i in $(seq 1 15); do
+          for _ in $(seq 1 15); do
             curl -fsS http://localhost:8000/health && break
             sleep 2
           done
@@ -222,7 +208,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: taskboard-image
-          path: ${{ env.WORKDIR }}/image.tar
+          path: image.tar
           retention-days: 1
           if-no-files-found: error
 
@@ -245,7 +231,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: taskboard-image
-          path: ${{ env.WORKDIR }}
+          path: .
 
       - name: Load image
         run: docker load -i image.tar
@@ -259,7 +245,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-          trivyignores: ${{ env.WORKDIR }}/security/.trivyignore
+          trivyignores: security/.trivyignore
 
       - name: Trivy scan (local act fallback, same settings via the Trivy container)
         if: ${{ env.ACT }}
@@ -278,7 +264,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "0"
           skip-setup-trivy: true
-          trivyignores: ${{ env.WORKDIR }}/security/.trivyignore
+          trivyignores: security/.trivyignore
 
       - name: Upload SARIF to the Security tab
         if: ${{ always() && !env.ACT }}
@@ -365,7 +351,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: taskboard-image
-          path: ${{ env.WORKDIR }}
+          path: .
 
       - name: Load image
         run: docker load -i image.tar
@@ -405,7 +391,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: taskboard-image
-          path: ${{ env.WORKDIR }}
+          path: .
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.12.0
@@ -434,7 +420,7 @@ jobs:
       - name: Smoke test through a port-forward
         run: |
           kubectl -n taskboard port-forward svc/taskboard-lite 8080:80 > /tmp/port-forward.log 2>&1 &
-          for i in $(seq 1 15); do
+          for _ in $(seq 1 15); do
             curl -fsS http://localhost:8080/health && break
             sleep 2
           done
