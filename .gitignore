@@ -1,13 +1,52 @@
-# local runtime data created by the app / docker compose
+# ---------------------------------------------------------------- Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+application/junit.xml
+.venv/
+venv/
+*.egg-info/
+
+# ---------------------------------------------------------------- Secrets / local env
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------- Node (frontend tooling)
+node_modules/
+dist/
+
+# ---------------------------------------------------------------- App runtime data
 application/data/
 docker/data/
 *.db
+*.sqlite3
 
-# test and scan reports
-application/junit.xml
-application/coverage.xml
-application/htmlcov/
+# ---------------------------------------------------------------- Terraform
+# State and plans carry account ids, instance ids, public IPs and user_data; never commit them.
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/tfplan
+terraform/crash.log
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+!terraform/terraform.tfvars.example
+
+# ---------------------------------------------------------------- Scan / build artefacts
 bandit-report.json
 pip-audit-report.json
 trivy-results.sarif
 image.tar
+security/reports/
+.act-artifacts/
+
+# ---------------------------------------------------------------- OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
